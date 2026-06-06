@@ -1,25 +1,38 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Admin from './pages/Admin'
 import Header from './components/Header'
-import { useEffect, useState } from 'react'
-import { supabase } from './lib/supabase'
-import type { Session } from '@supabase/supabase-js'
+import { auth } from './lib/cloudbase'
+import { getCurrentAdmin, type AdminUser } from './lib/auth'
 
 export default function App() {
-  const [session, setSession] = useState<Session | null>(null)
+  const [admin, setAdmin] = useState<AdminUser | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
+    let mounted = true
+    getCurrentAdmin().then((u) => {
+      if (!mounted) return
+      setAdmin(u)
       setLoading(false)
     })
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-      setSession(s)
-    })
-    return () => sub.subscription.unsubscribe()
+    // 监听登录态变化
+    const handler = () => {
+      getCurrentAdmin().then((u) => {
+        if (mounted) setAdmin(u)
+      })
+    }
+    // CloudBase Web SDK 提供 onLoginStateChanged
+    // 用 type assertion 兼容不同 SDK 版本
+    const a: any = auth
+    if (typeof a.onLoginStateChanged === 'function') {
+      a.onLoginStateChanged(handler)
+    }
+    return () => {
+      mounted = false
+    }
   }, [])
 
   if (loading) {
@@ -32,17 +45,17 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header session={session} />
+      <Header session={admin} />
       <main className="flex-1">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route
             path="/admin"
-            element={session ? <Admin /> : <Navigate to="/login" replace />}
+            element={admin ? <Admin /> : <Navigate to="/login" replace />}
           />
           <Route
             path="/login"
-            element={session ? <Navigate to="/admin" replace /> : <Login />}
+            element={admin ? <Navigate to="/admin" replace /> : <Login />}
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

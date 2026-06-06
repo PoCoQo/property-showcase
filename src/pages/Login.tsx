@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { adminLogin, rememberUsername } from '../lib/auth'
 
 export default function Login() {
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -13,12 +13,14 @@ export default function Login() {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    setLoading(false)
-    if (error) {
-      setError(error.message)
-    } else {
+    try {
+      await adminLogin(username, password)
+      rememberUsername(username)
       navigate('/admin')
+    } catch (e: any) {
+      setError(e?.message || '登录失败')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -27,19 +29,18 @@ export default function Login() {
       <div className="card">
         <h1 className="text-xl font-bold mb-1 text-slate-800">管理员登录</h1>
         <p className="text-sm text-slate-500 mb-4">
-          用 Supabase 中已创建的管理员邮箱登录
+          用 CloudBase 中已创建的管理员账号登录
         </p>
 
         <form onSubmit={handleLogin} className="space-y-3">
           <div>
-            <label className="label">邮箱</label>
+            <label className="label">用户名</label>
             <input
-              type="email"
               className="input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               required
-              autoComplete="email"
+              autoComplete="username"
             />
           </div>
           <div>

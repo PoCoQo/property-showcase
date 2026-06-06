@@ -1,0 +1,35 @@
+# =====================================================
+# 物业示例数据 - CloudBase 版
+# 在 CloudBase 控制台 → 数据库 → properties 集合 → 文档管理
+# 点"导入"或逐条"添加记录"
+# =====================================================
+
+# 字段说明：
+# - code: 编号（字符串）
+# - name: 名称（可空）
+# - type: shop(商铺) | parking(车位)
+# - district: 白云区 | 荔湾区 | 海珠区 | 越秀区
+# - address: 详细地址
+# - area: 面积 m²（数字，可空）
+# - status: vacant(空置) | rented(已租) | reserved(已预订)
+# - price_min: 租金下限（数字，可空）
+# - price_max: 租金上限（数字，可空）
+# - latitude: 纬度（数字）
+# - longitude: 经度（数字）
+# - description: 备注（可空）
+# - contact: 联系电话/微信（可空）
+
+# 10 条示例数据（导入时用 JSON 数组格式，10 条一起）：
+
+[
+  {"code":"B-101","name":"白云万达广场 商铺","type":"shop","district":"白云区","address":"广州市白云区云城东路 501 号","area":85.5,"status":"vacant","price_min":12000,"price_max":15000,"latitude":23.1589,"longitude":113.2736,"description":"临近地铁口，人流量大","contact":"138-XXXX-XXXX"},
+  {"code":"B-102","name":"白云万达广场 商铺","type":"shop","district":"白云区","address":"广州市白云区云城东路 501 号","area":65.0,"status":"rented","price_min":9000,"price_max":11000,"latitude":23.1591,"longitude":113.2738,"description":null,"contact":null},
+  {"code":"B-P01","name":"白云万达广场 车位","type":"parking","district":"白云区","address":"广州市白云区云城东路 501 号 B1","area":null,"status":"vacant","price_min":600,"price_max":800,"latitude":23.1588,"longitude":113.2735,"description":"地下车库","contact":"138-XXXX-XXXX"},
+  {"code":"L-201","name":"西关大厦 商铺","type":"shop","district":"荔湾区","address":"广州市荔湾区康王中路 300 号","area":120.0,"status":"vacant","price_min":18000,"price_max":22000,"latitude":23.1167,"longitude":113.2417,"description":"上下九商圈，临街","contact":"139-XXXX-XXXX"},
+  {"code":"L-P01","name":"西关大厦 车位","type":"parking","district":"荔湾区","address":"广州市荔湾区康王中路 300 号 B2","area":null,"status":"rented","price_min":700,"price_max":900,"latitude":23.1168,"longitude":113.2418,"description":null,"contact":null},
+  {"code":"H-301","name":"珠江新城 商铺","type":"shop","district":"海珠区","address":"广州市海珠区滨江东路 800 号","area":200.0,"status":"vacant","price_min":35000,"price_max":42000,"latitude":23.1051,"longitude":113.2891,"description":"一线江景，适合餐饮","contact":"137-XXXX-XXXX"},
+  {"code":"H-302","name":"珠江新城 商铺","type":"shop","district":"海珠区","address":"广州市海珠区滨江东路 800 号","area":95.0,"status":"reserved","price_min":18000,"price_max":22000,"latitude":23.1053,"longitude":113.2893,"description":"已预订","contact":null},
+  {"code":"Y-401","name":"北京路 商铺","type":"shop","district":"越秀区","address":"广州市越秀区北京路 200 号","area":50.0,"status":"vacant","price_min":25000,"price_max":30000,"latitude":23.1255,"longitude":113.2707,"description":"步行街核心位置","contact":"136-XXXX-XXXX"},
+  {"code":"Y-402","name":"北京路 商铺","type":"shop","district":"越秀区","address":"广州市越秀区北京路 200 号","area":75.0,"status":"rented","price_min":20000,"price_max":24000,"latitude":23.1256,"longitude":113.2708,"description":null,"contact":null},
+  {"code":"Y-P01","name":"北京路 车位","type":"parking","district":"越秀区","address":"广州市越秀区北京路 200 号 B1","area":null,"status":"vacant","price_min":1000,"price_max":1200,"latitude":23.1254,"longitude":113.2706,"description":"稀缺车位","contact":"136-XXXX-XXXX"}
+]

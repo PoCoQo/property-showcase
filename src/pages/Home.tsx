@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { fetchProperties } from '../lib/api'
 import type { Property } from '../lib/types'
 import FilterBar, { type Filter } from '../components/FilterBar'
 import PropertyCard from '../components/PropertyCard'
@@ -18,14 +18,13 @@ export default function Home() {
   })
 
   useEffect(() => {
-    supabase
-      .from('properties')
-      .select('*')
-      .order('district', { ascending: true })
-      .order('code', { ascending: true })
-      .then(({ data, error }) => {
-        if (error) console.error(error)
-        setAll(data ?? [])
+    fetchProperties()
+      .then((data) => {
+        setAll(data)
+        setLoading(false)
+      })
+      .catch((e) => {
+        console.error(e)
         setLoading(false)
       })
   }, [])

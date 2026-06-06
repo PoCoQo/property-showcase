@@ -1,14 +1,14 @@
 import { Link } from 'react-router-dom'
-import type { Session } from '@supabase/supabase-js'
-import { supabase } from '../lib/supabase'
+import type { AdminUser } from '../lib/auth'
+import { adminLogout } from '../lib/auth'
 
 interface Props {
-  session: Session | null
+  session: AdminUser | null
 }
 
 export default function Header({ session }: Props) {
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    await adminLogout()
   }
 
   return (

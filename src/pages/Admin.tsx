@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import {
+  fetchProperties,
+  insertProperty,
+  updateProperty,
+  deleteProperty,
+} from '../lib/api'
 import {
   DISTRICTS,
   PROPERTY_STATUS_LABEL,
@@ -39,13 +44,12 @@ export default function Admin() {
 
   const load = async () => {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('properties')
-      .select('*')
-      .order('district', { ascending: true })
-      .order('code', { ascending: true })
-    if (error) console.error(error)
-    setList(data ?? [])
+    try {
+      const data = await fetchProperties()
+      setList(data)
+    } catch (e) {
+      console.error(e)
+    }
     setLoading(false)
   }
 
@@ -99,15 +103,15 @@ export default function Admin() {
       longitude: form.longitude === ('' as any) || form.longitude == null ? null : Number(form.longitude),
     } as PropertyInput
 
-    let error
+    let result: { error?: string }
     if (editing && editing !== 'new') {
-      ({ error } = await supabase.from('properties').update(payload).eq('id', editing.id))
+      result = await updateProperty(editing.id, payload)
     } else {
-      ({ error } = await supabase.from('properties').insert(payload))
+      result = await insertProperty(payload)
     }
     setSaving(false)
-    if (error) {
-      alert('保存失败: ' + error.message)
+    if (result.error) {
+      alert('保存失败: ' + result.error)
     } else {
       close()
       load()
@@ -116,8 +120,8 @@ export default function Admin() {
 
   const remove = async (p: Property) => {
     if (!confirm(`确认删除「${p.code}」？此操作不可恢复。`)) return
-    const { error } = await supabase.from('properties').delete().eq('id', p.id)
-    if (error) alert('删除失败: ' + error.message)
+    const result = await deleteProperty(p.id)
+    if (result.error) alert('删除失败: ' + result.error)
     else load()
   }
 
