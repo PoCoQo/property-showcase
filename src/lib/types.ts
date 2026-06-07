@@ -38,8 +38,8 @@ export interface Property {
   longitude: number | null
   description: string | null
   contact: string | null
-  created_at: string
-  updated_at: string
+  created_at: number
+  updated_at: number
 }
 
 export type PropertyInput = Omit<Property, 'id' | 'created_at' | 'updated_at'>

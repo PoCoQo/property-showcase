@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { adminLogin, rememberUsername } from '../lib/auth'
+import { AUTH_CHANGED_EVENT } from '../App'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -16,6 +17,7 @@ export default function Login() {
     try {
       await adminLogin(username, password)
       rememberUsername(username)
+      window.dispatchEvent(new Event(AUTH_CHANGED_EVENT))
       navigate('/admin')
     } catch (e: any) {
       setError(e?.message || '登录失败')

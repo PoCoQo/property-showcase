@@ -1,14 +1,18 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import type { AdminUser } from '../lib/auth'
 import { adminLogout } from '../lib/auth'
+import { AUTH_CHANGED_EVENT } from '../App'
 
 interface Props {
   session: AdminUser | null
 }
 
 export default function Header({ session }: Props) {
+  const navigate = useNavigate()
   const handleLogout = async () => {
     await adminLogout()
+    window.dispatchEvent(new Event(AUTH_CHANGED_EVENT))
+    navigate('/')
   }
 
   return (

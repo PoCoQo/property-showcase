@@ -4,8 +4,10 @@ import Home from './pages/Home'
 import Login from './pages/Login'
 import Admin from './pages/Admin'
 import Header from './components/Header'
-import { auth } from './lib/cloudbase'
 import { getCurrentAdmin, type AdminUser } from './lib/auth'
+
+/** 全局事件名：登录态变化（登录/登出后 dispatch） */
+export const AUTH_CHANGED_EVENT = 'auth-changed'
 
 export default function App() {
   const [admin, setAdmin] = useState<AdminUser | null>(null)
@@ -13,25 +15,18 @@ export default function App() {
 
   useEffect(() => {
     let mounted = true
-    getCurrentAdmin().then((u) => {
-      if (!mounted) return
-      setAdmin(u)
-      setLoading(false)
-    })
-    // 监听登录态变化
-    const handler = () => {
+    const refresh = () => {
       getCurrentAdmin().then((u) => {
         if (mounted) setAdmin(u)
       })
     }
-    // CloudBase Web SDK 提供 onLoginStateChanged
-    // 用 type assertion 兼容不同 SDK 版本
-    const a: any = auth
-    if (typeof a.onLoginStateChanged === 'function') {
-      a.onLoginStateChanged(handler)
-    }
+    refresh()
+    setLoading(false)
+    // 监听 Login / Logout 触发的事件
+    window.addEventListener(AUTH_CHANGED_EVENT, refresh)
     return () => {
       mounted = false
+      window.removeEventListener(AUTH_CHANGED_EVENT, refresh)
     }
   }, [])
 

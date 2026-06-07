@@ -1,27 +1,15 @@
 // 数据访问层
-// 把 CloudBase 文档数据库的 API 封装成业务函数，
-// 业务组件不需要直接碰 CloudBase SDK。
+// 业务组件只需要调这些函数，不直接碰 HTTP / CloudBase。
+//
+// 所有 CRUD 都走 CloudBase properties 云函数（HTTP 触发），
+// 写操作需要带登录 token。
 
-import { db } from './cloudbase'
+import { callFunction } from './http'
 import type { Property, PropertyInput } from './types'
-
-const COL = 'properties'
-
-/** CloudBase 文档（_id 主键）→ 业务 Property（id 字段） */
-function toProperty(doc: any): Property {
-  if (!doc) return doc
-  const { _id, ...rest } = doc
-  return { id: _id, ...rest } as Property
-}
 
 /** 读取所有物业（按区域、编号排序） */
 export async function fetchProperties(): Promise<Property[]> {
-  const res = await db
-    .collection(COL)
-    .orderBy('district', 'asc')
-    .orderBy('code', 'asc')
-    .get()
-  return (res.data || []).map(toProperty)
+  return callFunction<Property[]>('properties', { action: 'list' })
 }
 
 /** 新增物业 */
@@ -30,11 +18,14 @@ export async function insertProperty(
 ): Promise<{ error?: string }> {
   try {
     const now = Date.now()
-    await db.collection(COL).add({
-      ...payload,
-      created_at: now,
-      updated_at: now,
-    })
+    await callFunction(
+      'properties',
+      {
+        action: 'create',
+        data: { ...payload, created_at: now, updated_at: now },
+      },
+      { requireAuth: true }
+    )
     return {}
   } catch (e: any) {
     return { error: e?.message || '新增失败' }
@@ -47,10 +38,15 @@ export async function updateProperty(
   payload: Partial<PropertyInput>
 ): Promise<{ error?: string }> {
   try {
-    await db.collection(COL).doc(id).update({
-      ...payload,
-      updated_at: Date.now(),
-    })
+    await callFunction(
+      'properties',
+      {
+        action: 'update',
+        id,
+        data: { ...payload, updated_at: Date.now() },
+      },
+      { requireAuth: true }
+    )
     return {}
   } catch (e: any) {
     return { error: e?.message || '更新失败' }
@@ -62,7 +58,11 @@ export async function deleteProperty(
   id: string
 ): Promise<{ error?: string }> {
   try {
-    await db.collection(COL).doc(id).remove()
+    await callFunction(
+      'properties',
+      { action: 'delete', id },
+      { requireAuth: true }
+    )
     return {}
   } catch (e: any) {
     return { error: e?.message || '删除失败' }

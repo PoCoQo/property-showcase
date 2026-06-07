@@ -1,58 +1,101 @@
 // CloudBase 云函数：adminLogin
-// 用途：管理员登录验证，签发自定义登录 ticket
+// 用途：管理员登录验证，签发 HMAC token
 //
-// 部署方法（一次性，2 分钟）：
-// 1. 打开 CloudBase 控制台 → 你的环境 → 云函数
-// 2. 点击"新建云函数"
-// 3. 函数名：adminLogin
-// 4. 运行环境：Node.js 16+
-// 5. 把本文件全部内容粘贴到 index.js
-// 6. 点击"完成"部署
+// 调用方式：HTTP 触发访问（POST application/json）
+//   - URL:    https://${ENV_ID}.ap-shanghai.tencentscf.com/adminLogin
+//   - Header: Content-Type: application/json
+//   - Body:   { "username": "...", "password": "..." }
 //
-// 配套的数据集合：
-// - admins 集合（你需要在 CloudBase 数据库里手动创建）
-//   字段：username (string), password (string, 明文演示用)
-//   权限：仅管理员可读写
+// 返回：{ code: 0, data: { token, user: { uid, username } } }
+//
+// 配套数据集合：admins（字段：username, password）
 
 const cloudbase = require('@cloudbase/node-sdk')
+const crypto = require('crypto')
 
-exports.main = async (event /*, context */) => {
-  // 解析请求参数
-  const { username, password } = event || {}
-  if (!username || !password) {
-    return { code: 400, message: '用户名或密码不能为空' }
+// 环境 ID 与 token 签名密钥（演示用，生产请挪到 env / KMS）
+const ENV_ID = 'bycjh5-d9g7g8uuk3d4137d2'
+const TOKEN_SECRET = 'byc-token-secret-2026-change-me'
+
+/** 简单的 HMAC 签名 token */
+function signToken(payload) {
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url')
+  const sig = crypto
+    .createHmac('sha256', TOKEN_SECRET)
+    .update(body)
+    .digest('base64url')
+  return `${body}.${sig}`
+}
+
+function respond(statusCode, payload) {
+  return {
+    statusCode,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Max-Age': '86400',
+    },
+    body: JSON.stringify(payload),
+  }
+}
+
+function getParams(event) {
+  if (event.body && typeof event.body === 'string') {
+    try { return JSON.parse(event.body) } catch {}
+  }
+  if (event.queryStringParameters) {
+    return { ...event, ...event.queryStringParameters }
+  }
+  return event || {}
+}
+
+exports.main = async (event, context) => {
+  // CORS 预检
+  if (event && event.httpMethod === 'OPTIONS') {
+    return respond(200, { code: 0, data: 'ok' })
   }
 
-  // 初始化 CloudBase（用当前函数所在环境）
-  const app = cloudbase.init({ env: cloudbase.SYMBOL_CURRENT_ENV })
+  const params = getParams(event)
+  const { username, password } = params
+
+  if (!username || !password) {
+    return respond(400, { code: 400, message: '用户名或密码不能为空' })
+  }
+
+  // 云函数内 SDK 是好用的，直接 init
+  const app = cloudbase.init({ env: ENV_ID })
   const db = app.database()
 
   try {
-    // 查 admins 集合
     const res = await db.collection('admins').where({ username }).limit(1).get()
     if (!res.data || res.data.length === 0) {
-      return { code: 401, message: '账号或密码错误' }
+      return respond(401, { code: 401, message: '账号或密码错误' })
     }
     const admin = res.data[0]
-
-    // ⚠️ 演示用：明文比对。生产环境请用 bcrypt 哈希。
     if (admin.password !== password) {
-      return { code: 401, message: '账号或密码错误' }
+      return respond(401, { code: 401, message: '账号或密码错误' })
     }
 
-    // 签发自定义登录 ticket（有效期 7 天）
-    const ticket = app.auth().createTicket(admin._id, {
-      refresh: 7 * 24 * 60 * 60,
+    // 签发 token（有效期 7 天）
+    const token = signToken({
+      uid: admin._id,
+      username: admin.username,
+      exp: Date.now() + 7 * 24 * 60 * 60 * 1000,
     })
 
-    return {
+    return respond(200, {
       code: 0,
       data: {
-        ticket,
+        token,
         user: { uid: admin._id, username: admin.username },
       },
-    }
+    })
   } catch (e) {
-    return { code: 500, message: '服务异常：' + (e?.message || String(e)) }
+    return respond(500, {
+      code: 500,
+      message: '服务异常：' + (e && e.message ? e.message : String(e)),
+    })
   }
 }
