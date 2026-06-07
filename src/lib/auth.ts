@@ -4,6 +4,9 @@
 
 import { callFunction, getRememberedUsername, getToken, rememberUsername, setToken } from './http'
 
+// re-export：让 Login.tsx 还能从 '../lib/auth' 拿到 rememberUsername
+export { rememberUsername }
+
 export interface AdminUser {
   uid: string
   username: string
