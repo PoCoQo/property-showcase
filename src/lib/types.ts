@@ -23,6 +23,17 @@ export const PROPERTY_STATUS_COLOR: Record<PropertyStatus, string> = {
   reserved: 'bg-amber-100 text-amber-700 border-amber-200',
 }
 
+export interface MediaItem {
+  /** 媒体类型 */
+  type: 'image' | 'video'
+  /** CloudBase 存储 HTTPS URL（可直接 <img>/<video src>） */
+  url: string
+  /** 原始文件名（仅展示用） */
+  name?: string
+  /** 可选说明 */
+  caption?: string
+}
+
 export interface Property {
   id: string
   code: string
@@ -38,6 +49,8 @@ export interface Property {
   longitude: number | null
   description: string | null
   contact: string | null
+  /** 媒体列表（图+视频） */
+  media: MediaItem[]
   created_at: number
   updated_at: number
 }

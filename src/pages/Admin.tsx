@@ -12,11 +12,13 @@ import {
 } from '../lib/types'
 import type {
   District,
+  MediaItem,
   Property,
   PropertyInput,
   PropertyStatus,
   PropertyType,
 } from '../lib/types'
+import MediaUploader from '../components/MediaUploader'
 
 const EMPTY_FORM: PropertyInput = {
   code: '',
@@ -32,6 +34,7 @@ const EMPTY_FORM: PropertyInput = {
   longitude: null,
   description: '',
   contact: '',
+  media: [],
 }
 
 export default function Admin() {
@@ -77,6 +80,7 @@ export default function Admin() {
       longitude: p.longitude,
       description: p.description ?? '',
       contact: p.contact ?? '',
+      media: p.media ?? [],
     })
     setEditing(p)
   }
@@ -374,6 +378,14 @@ export default function Admin() {
                   className="input min-h-[80px]"
                   value={form.description ?? ''}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <MediaUploader
+                  value={form.media ?? []}
+                  onChange={(media: MediaItem[]) => setForm({ ...form, media })}
+                  disabled={saving}
                 />
               </div>
             </div>

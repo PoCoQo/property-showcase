@@ -129,7 +129,7 @@ export default function Home() {
                 key={p.id}
                 p={p}
                 active={activeId === p.id}
-                onClick={() => setActiveId(p.id)}
+                showThumb={false}
               />
             ))}
           </div>

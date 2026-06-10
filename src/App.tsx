@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Admin from './pages/Admin'
+import PropertyDetail from './pages/PropertyDetail'
 import Header from './components/Header'
 import { getCurrentAdmin, type AdminUser } from './lib/auth'
 
@@ -44,6 +45,7 @@ export default function App() {
       <main className="flex-1">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/property/:id" element={<PropertyDetail />} />
           <Route
             path="/admin"
             element={admin ? <Admin /> : <Navigate to="/login" replace />}

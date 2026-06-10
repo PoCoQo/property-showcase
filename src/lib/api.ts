@@ -12,6 +12,11 @@ export async function fetchProperties(): Promise<Property[]> {
   return callFunction<Property[]>('properties', { action: 'list' })
 }
 
+/** 读取单个物业（公开访问） */
+export async function fetchProperty(id: string): Promise<Property> {
+  return callFunction<Property>('properties', { action: 'get', id })
+}
+
 /** 新增物业 */
 export async function insertProperty(
   payload: PropertyInput

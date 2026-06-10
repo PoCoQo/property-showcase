@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { Property } from '../lib/types'
 
 interface Props {
@@ -56,6 +57,7 @@ export default function MapView({ properties, activeId, onMarkerClick, center }:
   const markersRef = useRef<Map<string, any>>(new Map())
   const [ready, setReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const navigate = useNavigate()
 
   // 初始化地图
   useEffect(() => {
@@ -104,7 +106,9 @@ export default function MapView({ properties, activeId, onMarkerClick, center }:
         title: p.code,
       })
       marker.on('click', () => {
+        // 标记点点击：跳详情页（保留 onMarkerClick 是为了 Home 里高亮联动）
         if (onMarkerClick) onMarkerClick(p.id)
+        navigate(`/property/${p.id}`)
       })
       markersRef.current.set(p.id, marker)
     })

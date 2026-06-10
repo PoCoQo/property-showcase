@@ -76,11 +76,42 @@ function respond(statusCode, payload) {
   }
 }
 
-/** CloudBase 文档（_id 主键）→ 业务 Property（id 字段） */
+/** CloudBase 文档（_id 主键）→ 业务 Property（id 字段）
+ *  兜底：旧数据从 Supabase 迁过来时 price 字段只有单值、没有 price_min/price_max，
+ *  这里统一补成 min=max=price，保证前端永远能渲染。
+ */
 function toProperty(doc) {
   if (!doc) return doc
   const { _id, ...rest } = doc
-  return { id: _id, ...rest }
+  // 兜底 1：旧 price 字段补成 price_min/price_max
+  const legacyPrice = rest.price
+  if (legacyPrice != null) {
+    if (rest.price_min == null) rest.price_min = legacyPrice
+    if (rest.price_max == null) rest.price_max = legacyPrice
+    delete rest.price
+  }
+  // 兜底 2：DB 里同时存了 lat/lng 和 latitude/longitude 两套，
+  // 前端只用 latitude/longitude。这里把 lat/lng 复制过去，统一字段名。
+  if (rest.latitude == null && rest.lat != null) rest.latitude = rest.lat
+  if (rest.longitude == null && rest.lng != null) rest.longitude = rest.lng
+  // 兜底 3：name / title 双轨
+  if (rest.name == null && rest.title != null) rest.name = rest.title
+  // 兜底 4：media 缺省值（保证前端有数组可遍历）
+  if (!Array.isArray(rest.media)) rest.media = []
+  // code 从 _id 截前 8 位（统一展示编号）
+  const code = rest.code || (_id ? String(_id).slice(0, 8).toUpperCase() : '')
+  return { id: _id, ...rest, code }
+}
+
+/** 安全过滤：剔除不可更新的字段（_id / id），以及 undefined 值 */
+function buildUpdate(data) {
+  const out = {}
+  for (const [k, v] of Object.entries(data || {})) {
+    if (k === '_id' || k === 'id') continue
+    if (v === undefined) continue
+    out[k] = v
+  }
+  return out
 }
 
 exports.main = async (event, context) => {
@@ -129,7 +160,8 @@ exports.main = async (event, context) => {
         return respond(400, { code: 400, message: 'data 必填' })
       }
       const now = Date.now()
-      const doc = { ...data, created_at: now, updated_at: now }
+      const safeData = buildUpdate(data)
+      const doc = { ...safeData, created_at: now, updated_at: now }
       const res = await db.collection(COL).add(doc)
       return respond(200, { code: 0, data: { id: res.id, ...doc } })
     }
@@ -140,9 +172,14 @@ exports.main = async (event, context) => {
       if (!data || typeof data !== 'object') {
         return respond(400, { code: 400, message: 'data 必填' })
       }
-      const update = { ...data, updated_at: Date.now() }
-      await db.collection(COL).doc(id).update(update)
-      return respond(200, { code: 0, data: { id, ...update } })
+      const safeData = buildUpdate(data)
+      console.log('[properties.update]', id, JSON.stringify(safeData))
+      // 显式 $set：只更新指定字段，绝不丢未传字段；防呆
+      await db
+        .collection(COL)
+        .doc(id)
+        .update({ $set: { ...safeData, updated_at: Date.now() } })
+      return respond(200, { code: 0, data: { id, ...safeData, updated_at: Date.now() } })
     }
 
     if (action === 'delete') {
@@ -150,6 +187,51 @@ exports.main = async (event, context) => {
       if (!id) return respond(400, { code: 400, message: 'id 必填' })
       await db.collection(COL).doc(id).remove()
       return respond(200, { code: 0, data: { id } })
+    }
+
+    // 媒体上传：接收前端传来的 data URL（base64），写入 CloudBase 存储
+    // 限制单文件 4MB（图片和短视频都够用；大视频以后升级到签名 URL 直传）
+    if (action === 'upload_media') {
+      const { fileName, dataUrl, mediaType } = params
+      if (!fileName || !dataUrl) {
+        return respond(400, { code: 400, message: 'fileName/dataUrl 必填' })
+      }
+      if (!['image', 'video'].includes(mediaType)) {
+        return respond(400, { code: 400, message: 'mediaType 必须是 image 或 video' })
+      }
+      const m = /^data:([^;]+);base64,(.+)$/.exec(dataUrl)
+      if (!m) {
+        return respond(400, { code: 400, message: 'dataUrl 格式错误（需为 data:mime;base64,...）' })
+      }
+      const buffer = Buffer.from(m[2], 'base64')
+      if (buffer.length > 4 * 1024 * 1024) {
+        return respond(413, {
+          code: 413,
+          message: `文件 ${(buffer.length / 1024 / 1024).toFixed(1)}MB 超过 4MB 上限，请压缩后再上传`,
+        })
+      }
+      // 安全化文件名 + 加时间戳避免重名
+      const ext = (fileName.split('.').pop() || (mediaType === 'image' ? 'jpg' : 'mp4')).toLowerCase()
+      const safeBase = fileName
+        .replace(/\.[^.]+$/, '')
+        .replace(/[^a-zA-Z0-9._-]/g, '_')
+        .slice(0, 40) || 'file'
+      const cloudPath = `property-media/${mediaType}s/${Date.now()}-${safeBase}.${ext}`
+      try {
+        const result = await app.uploadFile({ cloudPath, fileContent: buffer })
+        return respond(200, {
+          code: 0,
+          data: {
+            url: result.fileID, // cloud://... 格式
+            download_url: result.download_url, // https:// 可直接用
+            cloudPath,
+            size: buffer.length,
+            mediaType,
+          },
+        })
+      } catch (e) {
+        return respond(500, { code: 500, message: '上传失败：' + (e.message || String(e)) })
+      }
     }
 
     return respond(400, { code: 400, message: '未知 action: ' + action })
