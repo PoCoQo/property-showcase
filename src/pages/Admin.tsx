@@ -19,6 +19,7 @@ import type {
   PropertyType,
 } from '../lib/types'
 import MediaUploader from '../components/MediaUploader'
+import LocationPicker from '../components/LocationPicker'
 
 const EMPTY_FORM: PropertyInput = {
   code: '',
@@ -44,6 +45,7 @@ export default function Admin() {
   const [form, setForm] = useState<PropertyInput>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -336,31 +338,48 @@ export default function Admin() {
                 />
               </div>
 
-              <div>
-                <label className="label">纬度（地图用）</label>
-                <input
-                  type="number"
-                  step="0.000001"
-                  className="input"
-                  value={form.latitude ?? ''}
-                  onChange={(e) =>
-                    setForm({ ...form, latitude: e.target.value === '' ? null : Number(e.target.value) })
-                  }
-                  placeholder="如 23.1291"
-                />
-              </div>
-              <div>
-                <label className="label">经度（地图用）</label>
-                <input
-                  type="number"
-                  step="0.000001"
-                  className="input"
-                  value={form.longitude ?? ''}
-                  onChange={(e) =>
-                    setForm({ ...form, longitude: e.target.value === '' ? null : Number(e.target.value) })
-                  }
-                  placeholder="如 113.2644"
-                />
+              <div className="sm:col-span-2">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="label !mb-0">📍 经纬度（地图用，可选）</label>
+                  <button
+                    type="button"
+                    onClick={() => setPickerOpen(true)}
+                    className="text-xs px-2 py-1 rounded bg-brand-500 text-white hover:bg-brand-600"
+                  >
+                    在地图上选点
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    step="0.000001"
+                    className="input"
+                    value={form.latitude ?? ''}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        latitude: e.target.value === '' ? null : Number(e.target.value),
+                      })
+                    }
+                    placeholder="纬度（如 23.1291）"
+                  />
+                  <input
+                    type="number"
+                    step="0.000001"
+                    className="input"
+                    value={form.longitude ?? ''}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        longitude: e.target.value === '' ? null : Number(e.target.value),
+                      })
+                    }
+                    placeholder="经度（如 113.2644）"
+                  />
+                </div>
+                <div className="text-xs text-slate-400 mt-1">
+                  留空 = 不显示地图标记,但其他信息照常展示
+                </div>
               </div>
 
               <div className="sm:col-span-2">
@@ -400,6 +419,16 @@ export default function Admin() {
             </div>
           </form>
         </div>
+      )}
+
+      {/* 地图选点弹窗 */}
+      {pickerOpen && (
+        <LocationPicker
+          lat={form.latitude}
+          lng={form.longitude}
+          onChange={(lat, lng) => setForm({ ...form, latitude: lat, longitude: lng })}
+          onClose={() => setPickerOpen(false)}
+        />
       )}
     </div>
   )
